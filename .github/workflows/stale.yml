@@ -12,7 +12,7 @@ jobs:
       - name: "Mark stale issues and pull requests"
         uses: actions/stale@v9
         with:
-          repo-token: ${{ secrets.GITHUB_TOKEN }}
+          repo-token: ${{ secrets.PERSONAL_ACCESS_TOKEN }}
           stale-issue-message: "This issue has been automatically marked as stale due to inactivity. If no further activity occurs, it will be closed."
           stale-pr-message: "This pull request has been automatically marked as stale due to inactivity. If no further activity occurs, it will be closed."
           close-issue-message: "This issue has been closed due to inactivity."
