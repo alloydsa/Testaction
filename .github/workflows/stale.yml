@@ -1,4 +1,4 @@
-name: "Mark stale issues and pull requests"
+name: "Mark and close stale bug issues"
 
 on:
   schedule:
@@ -9,18 +9,82 @@ jobs:
   stale:
     runs-on: ubuntu-latest
     steps:
-      - name: "Mark stale issues and pull requests"
-        uses: actions/stale@v9
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Mark and close stale bug issues
+        uses: actions/github-script@v6
         with:
           repo-token: ${{ secrets.PERSONAL_ACCESS_TOKEN }}
-          stale-issue-message: "This issue has been automatically marked as stale due to inactivity. If no further activity occurs, it will be closed."
-          stale-pr-message: "This pull request has been automatically marked as stale due to inactivity. If no further activity occurs, it will be closed."
-          close-issue-message: "This issue has been closed due to inactivity."
-          close-pr-message: "This pull request has been closed due to inactivity."
-          days-before-stale: 1
-          days-before-close: 2
-          stale-issue-label: "stale"
-          exempt-issue-labels: "pinned,security"
-          stale-pr-label: "stale"
-          exempt-pr-labels: "work-in-progress"
+          script: |
+            const daysBeforeStale = 1;  // Number of days to consider an issue stale
+            const daysBeforeClose = 1;  // Number of days after being marked stale to close
+            const staleLabel = 'stale';  // Label to apply to stale issues
+            const targetLabel = 'bug';  // Only target issues with this label
+            const excludeLabel = 'tracked';  // Exclude issues with this label
+            const staleMessage = "This issue has been automatically marked as stale due to inactivity. If no further activity occurs, it will be closed.";
+            const closeMessage = "This issue has been closed due to inactivity.";
+
+            const issues = await github.paginate(github.issues.listForRepo, {
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              state: 'open',
+              labels: targetLabel,
+              per_page: 100,
+            });
+
+            const now = new Date();
+            const user = context.actor;  // The user running the workflow
+
+            for (const issue of issues) {
+              // Check if the issue has the exclude label
+              if (issue.labels.some(label => label.name === excludeLabel)) {
+                continue;
+              }
+
+              // Check if the user has commented on the issue
+              const comments = await github.paginate(github.issues.listComments, {
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: issue.number,
+              });
+
+              const userHasCommented = comments.some(comment => comment.user.login === user);
+
+              if (!userHasCommented) {
+                continue;
+              }
+
+              const lastUpdated = new Date(issue.updated_at);
+              const daysSinceUpdate = (now - lastUpdated) / (1000 * 60 * 60 * 24);
+
+              if (daysSinceUpdate > daysBeforeStale && !issue.labels.some(label => label.name === staleLabel)) {
+                await github.issues.addLabels({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  issue_number: issue.number,
+                  labels: [staleLabel],
+                });
+
+                await github.issues.createComment({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  issue_number: issue.number,
+                  body: staleMessage,
+                });
+              } else if (daysSinceUpdate > (daysBeforeStale + daysBeforeClose) && issue.labels.some(label => label.name === staleLabel)) {
+                await github.issues.createComment({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  issue_number: issue.number,
+                  body: closeMessage,
+                });
+
+                await github.issues.update({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  issue_number: issue.number,
+                  state: 'closed',
+                });
+              }
 
