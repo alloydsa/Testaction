@@ -2,8 +2,8 @@ name: "Mark and close stale bug issues"
 
 on:
   schedule:
-    - cron: '0 0 * * *'  # Runs daily at midnight
-  workflow_dispatch:  # Allows manual triggering of the workflow
+    - cron: "0 0 * * *" # Runs daily at midnight
+  workflow_dispatch: # Allows manual triggering of the workflow
 
 jobs:
   stale:
@@ -21,8 +21,7 @@ jobs:
             const targetLabel = 'bug';  // Only target issues with this label
             const excludeLabel = 'tracked';  // Exclude issues with this label
             const specificUser = 'alloydsa';  // The specific user who must have commented
-
-            const issues = await github.paginate(github.issues.listForRepo, {
+            const issues = await github.paginate(github.rest.issues.listForRepo, {
               owner: context.repo.owner,
               repo: context.repo.repo,
               state: 'open',
@@ -39,7 +38,7 @@ jobs:
               }
 
               // Check if the specific user has commented
-              const comments = await github.paginate(github.issues.listComments, {
+              const comments = await github.paginate(github.rest.issues.listComments, {
                 owner: context.repo.owner,
                 repo: context.repo.repo,
                 issue_number: issue.number,
@@ -56,7 +55,7 @@ jobs:
 
               if (daysSinceUpdate > daysBeforeStale) {
                 // Mark the issue as stale
-                await github.issues.addLabels({
+                await github.rest.issues.addLabels({
                   owner: context.repo.owner,
                   repo: context.repo.repo,
                   issue_number: issue.number,
@@ -64,7 +63,7 @@ jobs:
                 });
 
                 // Post a stale warning comment
-                await github.issues.createComment({
+                await github.rest.issues.createComment({
                   owner: context.repo.owner,
                   repo: context.repo.repo,
                   issue_number: issue.number,
@@ -86,4 +85,3 @@ jobs:
           exempt-issue-labels: "tracked"
           only-labels: "bug"
           operations-per-run: 30
-
