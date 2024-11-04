@@ -15,7 +15,7 @@ jobs:
       - name: Mark and close stale bug issues
         uses: actions/github-script@v7
         with:
-          repo-token: ${{ secrets.PERSONAL_ACCESS_TOKEN }}
+          github-token: ${{ secrets.PERSONAL_ACCESS_TOKEN }}
           script: |
             const daysBeforeStale = 1;  // Number of days to consider an issue stale
             const daysBeforeClose = 1;  // Number of days after being marked stale to close
