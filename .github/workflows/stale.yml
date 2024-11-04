@@ -17,10 +17,12 @@ jobs:
         with:
           script: |
             const daysBeforeStale = 1;  // Number of days to consider an issue stale
+            const daysBeforeClose = 1;  // Number of days after being marked stale to close
             const staleLabel = 'stale';  // Label to apply to stale issues
             const targetLabel = 'bug';  // Only target issues with this label
             const excludeLabel = 'tracked';  // Exclude issues with this label
             const specificUser = 'alloydsa';  // The specific user who must have commented
+
             const issues = await github.paginate(github.rest.issues.listForRepo, {
               owner: context.repo.owner,
               repo: context.repo.repo,
@@ -46,11 +48,8 @@ jobs:
 
               const userCommented = comments.some(comment => comment.user.login === specificUser);
 
-              if (!userCommented) {
-                continue;
-              }
-
-              const lastUpdated = new Date(issue.updated_at);
+              if (userCommented) {
+                const lastUpdated = new Date(issue.updated_at);
               const daysSinceUpdate = (now - lastUpdated) / (1000 * 60 * 60 * 24);
 
               if (daysSinceUpdate > daysBeforeStale) {
@@ -67,21 +66,34 @@ jobs:
                   owner: context.repo.owner,
                   repo: context.repo.repo,
                   issue_number: issue.number,
-                  body: "This issue has been automatically marked as stale due to inactivity. If no further activity occurs, it will be closed."
+                  body: "This issue has been automatically marked as stale due to inactivity. If no further activity occurs, it will be closed in 1 days."
                 });
               }
-            }
-          github-token: ${{ secrets.PERSONAL_ACCESS_TOKEN }}
 
-      - name: Close stale issues
-        uses: actions/stale@v9
-        with:
-          repo-token: ${{ secrets.PERSONAL_ACCESS_TOKEN }}
-          stale-issue-message: "This issue has been automatically marked as stale due to inactivity. If no further activity occurs, it will be closed."
-          close-issue-message: "This issue has been closed due to inactivity."
-          days-before-stale: 1
-          days-before-close: 1
-          stale-issue-label: "stale"
-          exempt-issue-labels: "tracked"
-          only-labels: "bug"
-          operations-per-run: 30
+              // Check if the issue has been marked stale for the required daysBeforeClose
+              if (daysSinceUpdate > (daysBeforeStale + daysBeforeClose)) {
+                const updatedIssue = await github.rest.issues.get({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  issue_number: issue.number,
+                });
+
+                if (updatedIssue.data.labels.some(label => label.name === staleLabel)) {
+                  await github.rest.issues.update({
+                    owner: context.repo.owner,
+                    repo: context.repo.repo,
+                    issue_number: issue.number,
+                    state: 'closed',
+                  });
+
+                  // Post a close comment
+                  await github.rest.issues.createComment({
+                    owner: context.repo.owner,
+                    repo: context.repo.repo,
+                    issue_number: issue.number,
+                    body: "This issue has been closed due to inactivity."
+                  });
+                }
+              }
+            }
+            github-token: ${{ secrets.PERSONAL_ACCESS_TOKEN }}
