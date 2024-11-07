@@ -16,8 +16,8 @@ jobs:
         uses: actions/github-script@v7
         with:
           script: |
-            const daysBeforeStale = 1;  // Number of days to consider an issue stale
-            const daysBeforeClose = 1;  // Number of days after being marked stale to close
+            const daysBeforeStale = 0;  // Number of days to consider an issue stale
+            const daysBeforeClose = 0;  // Number of days after being marked stale to close
             const staleLabel = 'stale';  // Label to apply to stale issues
             const targetLabel = 'bug';  // Only target issues with this label
             const excludeLabel = 'tracked';  // Exclude issues with this label
@@ -52,25 +52,7 @@ jobs:
                 const lastUpdated = new Date(issue.updated_at);
                 const daysSinceUpdate = (now - lastUpdated) / (1000 * 60 * 60 * 24);
 
-                if (daysSinceUpdate > daysBeforeStale) {
-                  // Mark the issue as stale
-                  await github.rest.issues.addLabels({
-                    owner: context.repo.owner,
-                    repo: context.repo.repo,
-                    issue_number: issue.number,
-                    labels: [staleLabel],
-                  });
-
-                  // Post a stale warning comment
-                  await github.rest.issues.createComment({
-                    owner: context.repo.owner,
-                    repo: context.repo.repo,
-                    issue_number: issue.number,
-                    body: "This issue has been automatically marked as stale due to inactivity. If no further activity occurs, it will be closed in 1 days."
-                  });
-                }
-
-                // Check if the issue has been marked stale for the required daysBeforeClose
+                                // Check if the issue has been marked stale for the required daysBeforeClose
                 if (daysSinceUpdate > (daysBeforeStale + daysBeforeClose)) {
                   const updatedIssue = await github.rest.issues.get({
                     owner: context.repo.owner,
@@ -93,8 +75,29 @@ jobs:
                       issue_number: issue.number,
                       body: "This issue has been closed due to inactivity."
                     });
+                    break;
                   }
                 }
+
+                if (daysSinceUpdate > daysBeforeStale) {
+                  // Mark the issue as stale
+                  await github.rest.issues.addLabels({
+                    owner: context.repo.owner,
+                    repo: context.repo.repo,
+                    issue_number: issue.number,
+                    labels: [staleLabel],
+                  });
+
+                  // Post a stale warning comment
+                  await github.rest.issues.createComment({
+                    owner: context.repo.owner,
+                    repo: context.repo.repo,
+                    issue_number: issue.number,
+                    body: "This issue has been automatically marked as stale due to inactivity. If no further activity occurs, it will be closed in 1 days."
+                  });
+                }
+
+
               }
             }
           github-token: ${{ secrets.PERSONAL_ACCESS_TOKEN }}
