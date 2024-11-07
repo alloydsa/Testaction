@@ -16,12 +16,13 @@ jobs:
         uses: actions/github-script@v7
         with:
           script: |
-            const daysBeforeStale = 0;  // Number of days to consider an issue stale
-            const daysBeforeClose = 0;  // Number of days after being marked stale to close
+            const daysBeforeStale = 1;  // Number of days to consider an issue stale
+            const daysBeforeClose = 1;  // Number of days after being marked stale to close
             const staleLabel = 'stale';  // Label to apply to stale issues
             const targetLabel = 'bug';  // Only target issues with this label
             const excludeLabel = 'tracked';  // Exclude issues with this label
             const specificUser = 'alloydsa';  // The specific user who must have commented
+            const specificOrg = 'NetApp-openstack-dev'; //
 
             const issues = await github.paginate(github.rest.issues.listForRepo, {
               owner: context.repo.owner,
@@ -46,9 +47,25 @@ jobs:
                 issue_number: issue.number,
               });
 
-              const userCommented = comments.some(comment => comment.user.login === specificUser);
+              let orgUserCommented = false;
 
-              if (userCommented) {
+              for (const comment of comments) {
+                const user = comment.user.login;
+                try {
+                  const userOrgs = await github.paginate(github.rest.orgs.listForUser, {
+                    username: user,
+                  });
+
+                  if (userOrgs.some(org => org.login === specificOrg)) {
+                    orgUserCommented = true;
+                    break;
+                  }
+                } catch (error) {
+                  console.error(`Failed to fetch organizations for user ${user}:`, error);
+                }
+              }
+
+              if (orgUserCommented) {
                 const lastUpdated = new Date(issue.updated_at);
                 const daysSinceUpdate = (now - lastUpdated) / (1000 * 60 * 60 * 24);
 
