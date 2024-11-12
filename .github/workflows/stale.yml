@@ -54,7 +54,7 @@ jobs:
               for (const comment of comments) {
                 const user = comment.user.login;
                 try {
-                  const userOrgs = await github.paginate(github.rest.orgs.listForUser, {
+                  const userOrgs = await github.paginate(github.orgs.listForUser, {
                     username: user,
                   });
 
