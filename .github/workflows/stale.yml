@@ -9,6 +9,9 @@ jobs:
   stale:
     runs-on: ubuntu-latest
     steps:
+      - name: Enable debug logging
+        env:
+          ACTIONS_STEP_DEBUG: true
       - name: Checkout repository
         uses: actions/checkout@v4
 
