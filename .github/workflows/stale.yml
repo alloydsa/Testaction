@@ -10,8 +10,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Enable debug logging
-        env:
-          ACTIONS_STEP_DEBUG: true
+        run: echo "ACTIONS_STEP_DEBUG=true" >> $GITHUB_ENV
       - name: Checkout repository
         uses: actions/checkout@v4
 
